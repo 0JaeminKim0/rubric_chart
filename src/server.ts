@@ -1,0 +1,18 @@
+import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
+import app from './app';
+
+// Serve static files from public directory
+app.use('/static/*', serveStatic({ root: './public' }));
+
+const port = parseInt(process.env.PORT || '3000', 10);
+
+console.log(`🚀 Server starting on port ${port}...`);
+
+serve({
+  fetch: app.fetch,
+  port,
+}, (info) => {
+  console.log(`✅ Server is running on http://localhost:${info.port}`);
+  console.log(`📊 Task Scoring System ready!`);
+});

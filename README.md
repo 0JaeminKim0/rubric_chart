@@ -14,10 +14,53 @@ LLM 기반 과제 점수화 및 4사분면 버블 차트 의사결정 시스템
   - Human Override - 사용자 점수 수정 및 실시간 반영
   - 결과 Excel 내보내기
 
-## Live URLs
+## 🚀 Railway 배포 가이드
 
-- **Sandbox Preview**: https://3000-i5kktk7ww2qfhyqkndr3k-de59bda9.sandbox.novita.ai
-- **API Health Check**: https://3000-i5kktk7ww2qfhyqkndr3k-de59bda9.sandbox.novita.ai/api/health
+### 1. Railway 프로젝트 생성
+
+```bash
+# Railway CLI 설치 (선택사항)
+npm install -g @railway/cli
+
+# Railway 로그인
+railway login
+```
+
+### 2. GitHub 연동 배포 (권장)
+
+1. GitHub에 이 레포지토리를 Push
+2. [Railway Dashboard](https://railway.app/dashboard) 접속
+3. "New Project" → "Deploy from GitHub repo" 선택
+4. 레포지토리 선택 후 배포
+
+### 3. 환경 변수 설정
+
+Railway Dashboard에서 다음 환경 변수 설정:
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `OPENAI_API_KEY` | OpenAI API 키 | ✅ Yes |
+| `PORT` | 서버 포트 (Railway가 자동 설정) | Auto |
+
+**설정 방법:**
+1. Railway Dashboard → Project → Variables 탭
+2. "New Variable" 클릭
+3. `OPENAI_API_KEY` 입력 후 API 키 값 입력
+
+### 4. 배포 확인
+
+배포 완료 후 Railway가 제공하는 URL로 접속:
+- `https://your-project.up.railway.app`
+
+### 5. 수동 배포 (CLI)
+
+```bash
+# 프로젝트 디렉토리에서
+railway link  # 프로젝트 연결
+railway up    # 배포
+```
+
+---
 
 ## Data Architecture
 
@@ -38,6 +81,8 @@ LLM 기반 과제 점수화 및 4사분면 버블 차트 의사결정 시스템
 | Major Projects | X<3, Y≥3 | 어렵지만 영향력 큼 - 전략적 추진 |
 | Fill-ins | X≥3, Y<3 | 쉽지만 영향력 작음 - 여유시 추진 |
 | Thankless Tasks | X<3, Y<3 | 어렵고 영향력 작음 - 재검토 필요 |
+
+---
 
 ## User Guide
 
@@ -70,6 +115,8 @@ LLM 기반 과제 점수화 및 4사분면 버블 차트 의사결정 시스템
 - **Export Chart**: PNG 이미지로 차트 내보내기
 - **Export Data**: Excel 파일로 모든 점수 데이터 내보내기
 
+---
+
 ## API Endpoints
 
 | Endpoint | Method | Description |
@@ -101,37 +148,41 @@ LLM 기반 과제 점수화 및 4사분면 버블 차트 의사결정 시스템
 }
 ```
 
+---
+
 ## Tech Stack
 
-- **Framework**: Hono (Edge-first web framework)
-- **Runtime**: Cloudflare Workers / Pages
+- **Framework**: Hono + @hono/node-server
+- **Runtime**: Node.js 18+
 - **Visualization**: ECharts 5.x
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS (CDN)
 - **Excel Parsing**: SheetJS (xlsx)
 - **LLM**: OpenAI GPT-4o
+- **Deployment**: Railway
 
-## Deployment
+---
 
-### Platform
-- **Target**: Cloudflare Pages
-- **Status**: ✅ Active (Sandbox)
+## Local Development
 
-### Environment Variables
-```
-OPENAI_API_KEY=your-api-key
-```
-
-### Local Development
 ```bash
+# 의존성 설치
 npm install
+
+# 환경 변수 설정
+cp .env.example .env
+# .env 파일에 OPENAI_API_KEY 설정
+
+# 개발 서버 실행 (핫 리로드)
+npm run dev
+
+# 프로덕션 빌드
 npm run build
-npm run dev:sandbox
+
+# 프로덕션 서버 실행
+npm start
 ```
 
-### Production Deployment
-```bash
-npm run deploy:prod
-```
+---
 
 ## Design Principles
 
@@ -141,11 +192,15 @@ npm run deploy:prod
 4. **LLM 점수는 초기 추천값** - 참고용
 5. **사용자 수정이 최종값** - Human-in-the-loop
 
+---
+
 ## Success Metrics
 
 - LLM 점수 산정 성공률 ≥ 95%
 - 사용자 점수 수정률 ≤ 40%
 - 평가 소요 시간 기존 대비 ≥ 70% 단축
+
+---
 
 ## Last Updated
 

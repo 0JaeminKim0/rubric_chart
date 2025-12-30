@@ -1,27 +1,28 @@
 {
   "name": "task-scoring-system",
+  "version": "1.0.0",
   "type": "module",
   "description": "LLM-based Task Scoring System with 4-Quadrant Bubble Chart Visualization",
+  "main": "dist/server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
-    "dev": "vite",
-    "dev:sandbox": "wrangler pages dev dist --ip 0.0.0.0 --port 3000",
-    "build": "vite build",
-    "preview": "wrangler pages dev dist",
-    "deploy": "npm run build && wrangler pages deploy dist",
-    "deploy:prod": "npm run build && wrangler pages deploy dist --project-name task-scoring",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
-    "clean-port": "fuser -k 3000/tcp 2>/dev/null || true"
+    "dev": "tsx watch src/server.ts",
+    "build": "esbuild src/server.ts --bundle --platform=node --target=node18 --outfile=dist/server.js --format=esm --packages=external",
+    "start": "node dist/server.js",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@hono/node-server": "^1.19.7",
+    "dotenv": "^17.2.3",
     "hono": "^4.11.3",
     "uuid": "^13.0.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20251230.0",
-    "@hono/vite-build": "^1.2.0",
-    "@hono/vite-dev-server": "^0.18.2",
-    "vite": "^6.3.5",
-    "wrangler": "^4.4.0"
+    "@types/node": "^25.0.3",
+    "esbuild": "^0.27.2",
+    "tsx": "^4.21.0"
   }
 }
