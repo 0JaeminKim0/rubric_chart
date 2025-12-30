@@ -630,50 +630,87 @@ export function getIndexHtml(): string {
                 value: [
                     task.x_score_final,
                     task.y_score_final,
-                    (task.x_score_final + task.y_score_final) / 2 * 8
+                    Math.max(20, (task.x_score_final + task.y_score_final) / 2 * 10)
                 ],
                 taskId: task.task_id,
                 humanOverride: task.human_override,
                 itemStyle: {
                     color: getQuadrantColor(task.x_score_final, task.y_score_final),
-                    opacity: 0.8
+                    opacity: 0.85,
+                    borderColor: '#fff',
+                    borderWidth: 2
                 }
             }));
 
             const option = {
                 grid: {
-                    left: 60,
-                    right: 40,
-                    top: 40,
-                    bottom: 60
+                    left: 80,
+                    right: 60,
+                    top: 60,
+                    bottom: 80,
+                    containLabel: false
                 },
                 xAxis: {
                     type: 'value',
-                    name: 'Ease of Implementation',
-                    nameLocation: 'center',
-                    nameGap: 35,
+                    name: 'Ease of Implementation →',
+                    nameLocation: 'middle',
+                    nameGap: 45,
+                    nameTextStyle: {
+                        fontSize: 14,
+                        fontWeight: 'bold',
+                        color: '#374151'
+                    },
                     min: 0.5,
                     max: 5.5,
                     interval: 1,
+                    axisLabel: {
+                        formatter: '{value}',
+                        fontSize: 12,
+                        color: '#6b7280'
+                    },
                     splitLine: {
                         show: true,
-                        lineStyle: { color: '#eee' }
+                        lineStyle: { color: '#e5e7eb', type: 'solid' }
                     },
-                    axisLine: { lineStyle: { color: '#999' } }
+                    axisLine: { 
+                        show: true,
+                        lineStyle: { color: '#9ca3af', width: 2 } 
+                    },
+                    axisTick: {
+                        show: true,
+                        lineStyle: { color: '#9ca3af' }
+                    }
                 },
                 yAxis: {
                     type: 'value',
-                    name: 'Impact of Implementation',
-                    nameLocation: 'center',
-                    nameGap: 40,
+                    name: '↑ Impact of Implementation',
+                    nameLocation: 'middle',
+                    nameGap: 55,
+                    nameTextStyle: {
+                        fontSize: 14,
+                        fontWeight: 'bold',
+                        color: '#374151'
+                    },
                     min: 0.5,
                     max: 5.5,
                     interval: 1,
+                    axisLabel: {
+                        formatter: '{value}',
+                        fontSize: 12,
+                        color: '#6b7280'
+                    },
                     splitLine: {
                         show: true,
-                        lineStyle: { color: '#eee' }
+                        lineStyle: { color: '#e5e7eb', type: 'solid' }
                     },
-                    axisLine: { lineStyle: { color: '#999' } }
+                    axisLine: { 
+                        show: true,
+                        lineStyle: { color: '#9ca3af', width: 2 } 
+                    },
+                    axisTick: {
+                        show: true,
+                        lineStyle: { color: '#9ca3af' }
+                    }
                 },
                 series: [{
                     type: 'scatter',
@@ -684,46 +721,62 @@ export function getIndexHtml(): string {
                     emphasis: {
                         focus: 'self',
                         itemStyle: {
-                            shadowBlur: 10,
-                            shadowColor: 'rgba(0, 0, 0, 0.3)'
+                            shadowBlur: 15,
+                            shadowColor: 'rgba(0, 0, 0, 0.4)',
+                            borderWidth: 3
+                        }
+                    },
+                    markLine: {
+                        silent: true,
+                        symbol: 'none',
+                        lineStyle: { 
+                            color: '#9ca3af', 
+                            type: 'dashed', 
+                            width: 2 
+                        },
+                        label: { show: false },
+                        data: [
+                            { xAxis: 3 },
+                            { yAxis: 3 }
+                        ]
+                    },
+                    markArea: {
+                        silent: true,
+                        data: [
+                            [{ xAxis: 3, yAxis: 3 }, { xAxis: 5.5, yAxis: 5.5 }],
+                        ],
+                        itemStyle: {
+                            color: 'rgba(34, 197, 94, 0.05)'
                         }
                     }
                 }],
                 tooltip: {
                     trigger: 'item',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: '#e5e7eb',
+                    borderWidth: 1,
+                    padding: [10, 15],
+                    textStyle: {
+                        color: '#374151',
+                        fontSize: 13
+                    },
                     formatter: function(params) {
                         const task = state.tasks.find(t => t.task_id === params.data.taskId);
-                        let html = '<strong>' + params.data.name + '</strong><br/>';
-                        html += 'Ease (X): ' + task.x_score_final + '<br/>';
-                        html += 'Impact (Y): ' + task.y_score_final;
+                        if (!task) return '';
+                        let html = '<div style="font-weight:600;margin-bottom:8px;font-size:14px;">' + params.data.name + '</div>';
+                        html += '<div style="display:flex;gap:15px;">';
+                        html += '<span>Ease (X): <strong>' + task.x_score_final + '</strong></span>';
+                        html += '<span>Impact (Y): <strong>' + task.y_score_final + '</strong></span>';
+                        html += '</div>';
                         if (task.human_override) {
-                            html += '<br/><span style="color: #f97316;">Human Override</span>';
+                            html += '<div style="color:#f97316;margin-top:6px;font-size:12px;"><i class="fas fa-user-edit"></i> Human Override</div>';
                         }
                         return html;
                     }
-                },
-                // Reference lines at 3
-                markLine: {
-                    silent: true,
-                    data: [
-                        { xAxis: 3, lineStyle: { color: '#ccc', type: 'dashed' } },
-                        { yAxis: 3, lineStyle: { color: '#ccc', type: 'dashed' } }
-                    ]
                 }
             };
 
-            // Add markLine to series
-            option.series[0].markLine = {
-                silent: true,
-                symbol: 'none',
-                lineStyle: { color: '#ddd', type: 'dashed', width: 1 },
-                data: [
-                    { xAxis: 3 },
-                    { yAxis: 3 }
-                ]
-            };
-
-            state.chart.setOption(option);
+            state.chart.setOption(option, true);
 
             // Click handler
             state.chart.off('click');
