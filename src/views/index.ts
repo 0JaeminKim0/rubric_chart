@@ -650,13 +650,30 @@ export function getIndexHtml(): string {
                 return;
             }
             
+            // Generate random offsets to prevent overlapping bubbles
+            // Use task_id as seed for consistent positioning
+            function getJitter(taskId, axis) {
+                // Create a simple hash from taskId for reproducible randomness
+                let hash = 0;
+                const str = taskId + axis;
+                for (let i = 0; i < str.length; i++) {
+                    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                    hash = hash & hash;
+                }
+                // Convert to range -0.35 to +0.35
+                return ((Math.abs(hash) % 1000) / 1000 - 0.5) * 0.7;
+            }
+            
             const data = state.tasks.map(task => ({
                 name: task.task_name,
                 value: [
-                    task.x_score_final,
-                    task.y_score_final,
+                    task.x_score_final + getJitter(task.task_id, 'x'),
+                    task.y_score_final + getJitter(task.task_id, 'y'),
                     Math.max(25, (task.x_score_final + task.y_score_final) / 2 * 12)
                 ],
+                // Store original scores for display
+                originalX: task.x_score_final,
+                originalY: task.y_score_final,
                 taskId: task.task_id,
                 humanOverride: task.human_override,
                 itemStyle: {
