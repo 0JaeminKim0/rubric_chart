@@ -265,13 +265,13 @@ export function getIndexHtml(): string {
                             <p>Upload tasks and run scoring to see the chart</p>
                         </div>
                     </div>
-                    <div id="chart-container" class="h-96 hidden relative">
-                        <div id="bubble-chart" class="w-full h-full"></div>
+                    <div id="chart-container" class="hidden relative" style="height: 450px;">
+                        <div id="bubble-chart" style="width: 100%; height: 100%;"></div>
                         <!-- Quadrant Labels -->
-                        <div class="quadrant-label" style="top: 15%; right: 15%;">Quick Wins</div>
-                        <div class="quadrant-label" style="top: 15%; left: 15%;">Major Projects</div>
-                        <div class="quadrant-label" style="bottom: 15%; right: 15%;">Fill-ins</div>
-                        <div class="quadrant-label" style="bottom: 15%; left: 15%;">Thankless Tasks</div>
+                        <div class="quadrant-label" style="top: 12%; right: 18%;">Quick Wins</div>
+                        <div class="quadrant-label" style="top: 12%; left: 18%;">Major Projects</div>
+                        <div class="quadrant-label" style="bottom: 18%; right: 18%;">Fill-ins</div>
+                        <div class="quadrant-label" style="bottom: 18%; left: 18%;">Thankless Tasks</div>
                     </div>
                 </div>
 
@@ -581,6 +581,10 @@ export function getIndexHtml(): string {
                 document.getElementById('export-chart').classList.remove('hidden');
                 document.getElementById('export-data').classList.remove('hidden');
                 
+                // Initialize chart after container is visible
+                ensureChartInitialized();
+                updateChart();
+                
                 updateStepIndicators(4);
                 updateSummary();
                 showToast('Scoring completed!', 'success');
@@ -620,17 +624,38 @@ export function getIndexHtml(): string {
 
         // Chart
         function initChart() {
-            state.chart = echarts.init(elements.bubbleChart);
-            window.addEventListener('resize', () => state.chart.resize());
+            // Don't initialize chart here - wait until container is visible
+            window.addEventListener('resize', () => {
+                if (state.chart) {
+                    state.chart.resize();
+                }
+            });
+        }
+        
+        function ensureChartInitialized() {
+            if (!state.chart) {
+                // Initialize chart only when container is visible
+                state.chart = echarts.init(elements.bubbleChart);
+            }
+            // Always resize to ensure proper dimensions
+            setTimeout(() => {
+                state.chart.resize();
+            }, 100);
         }
 
         function updateChart() {
+            // Ensure chart is initialized before updating
+            if (!state.chart) {
+                console.log('Chart not initialized, skipping update');
+                return;
+            }
+            
             const data = state.tasks.map(task => ({
                 name: task.task_name,
                 value: [
                     task.x_score_final,
                     task.y_score_final,
-                    Math.max(20, (task.x_score_final + task.y_score_final) / 2 * 10)
+                    Math.max(25, (task.x_score_final + task.y_score_final) / 2 * 12)
                 ],
                 taskId: task.task_id,
                 humanOverride: task.human_override,
