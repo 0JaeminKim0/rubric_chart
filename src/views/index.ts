@@ -660,8 +660,8 @@ export function getIndexHtml(): string {
                     hash = ((hash << 5) - hash) + str.charCodeAt(i);
                     hash = hash & hash;
                 }
-                // Convert to range -0.35 to +0.35
-                return ((Math.abs(hash) % 1000) / 1000 - 0.5) * 0.7;
+                // Convert to range -0.3 to +0.3
+                return ((Math.abs(hash) % 1000) / 1000 - 0.5) * 0.6;
             }
             
             const data = state.tasks.map(task => ({
@@ -706,7 +706,9 @@ export function getIndexHtml(): string {
                     max: 5.5,
                     interval: 1,
                     axisLabel: {
-                        formatter: '{value}',
+                        formatter: function(value) {
+                            return Math.round(value) >= 1 && Math.round(value) <= 5 && value === Math.round(value) ? value : '';
+                        },
                         fontSize: 12,
                         color: '#6b7280'
                     },
@@ -737,7 +739,9 @@ export function getIndexHtml(): string {
                     max: 5.5,
                     interval: 1,
                     axisLabel: {
-                        formatter: '{value}',
+                        formatter: function(value) {
+                            return Math.round(value) >= 1 && Math.round(value) <= 5 && value === Math.round(value) ? value : '';
+                        },
                         fontSize: 12,
                         color: '#6b7280'
                     },
