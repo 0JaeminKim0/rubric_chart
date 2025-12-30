@@ -12,7 +12,7 @@ function buildUserPrompt(
   rubric: Rubric
 ): string {
   const context = taskDescription || "No additional context";
-  
+
   return `Task:
 ${taskName}
 
@@ -38,7 +38,7 @@ Impact of Implementation (Y):
 Instructions:
 - Assign exactly one integer score (1-5) for X and Y.
 - Select the score whose definition best matches the task.
-- Output JSON only. Example: {"X": 3, "Y": 4}`;
+- Output JSON only.`;
 }
 
 export interface LLMConfig {
@@ -55,45 +55,69 @@ export async function scoreTask(
   retryCount: number = 0
 ): Promise<ScoreResponse> {
   const userPrompt = buildUserPrompt(taskName, taskDescription, rubric);
-  
+
   // Use custom base URL if provided, otherwise default to OpenAI
   const baseUrl = config.baseUrl || 'https://api.openai.com/v1';
-  const model = config.model || 'gpt-4o';
+
+  // ✅ Default model changed to GPT-5
+  // (Optionally, you can use "gpt-5-chat-latest" if you prefer the chat snapshot family.)
+  const model = config.model || 'gpt-5';
+
   const apiUrl = `${baseUrl}/chat/completions`;
-  
+
   console.log('');
   console.log('='.repeat(60));
-  console.log(`[LLM] 🚀 Starting LLM Score Request`);
+  console.log(`[LLM] Starting LLM Score Request`);
   console.log('='.repeat(60));
-  console.log(`[LLM] 📋 Task Name: "${taskName}"`);
-  console.log(`[LLM] 📝 Description: "${taskDescription || 'None'}"`);
-  console.log(`[LLM] 🤖 Model: ${model}`);
-  console.log(`[LLM] 🌐 API URL: ${apiUrl}`);
-  console.log(`[LLM] 🔑 API Key: ${config.apiKey ? config.apiKey.substring(0, 10) + '...' : 'NOT SET'}`);
-  console.log(`[LLM] 🔄 Retry Count: ${retryCount}`);
+  console.log(`[LLM] Task Name: "${taskName}"`);
+  console.log(`[LLM] Description: "${taskDescription || 'None'}"`);
+  console.log(`[LLM] Model: ${model}`);
+  console.log(`[LLM] API URL: ${apiUrl}`);
+  console.log(`[LLM] API Key: ${config.apiKey ? config.apiKey.substring(0, 10) + '...' : 'NOT SET'}`);
+  console.log(`[LLM] Retry Count: ${retryCount}`);
   console.log('-'.repeat(60));
-  
+
+  // ✅ Strongly typed JSON schema to guarantee {"X": int(1..5), "Y": int(1..5)}
+  const scoreSchema = {
+    name: "score_response",
+    strict: true,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        X: { type: "integer", minimum: 1, maximum: 5 },
+        Y: { type: "integer", minimum: 1, maximum: 5 }
+      },
+      required: ["X", "Y"]
+    }
+  } as const;
+
   const requestBody = {
-    model: model,
+    model,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userPrompt }
     ],
-    temperature: 0.1,
+    temperature: 0.0,
     max_tokens: 50,
-    response_format: { type: 'json_object' }
+
+    // ✅ Use Structured Outputs via JSON Schema (more reliable than json_object)
+    response_format: {
+      type: "json_schema",
+      json_schema: scoreSchema
+    }
   };
-  
-  console.log(`[LLM] 📤 Request Body (messages truncated):`);
+
+  console.log(`[LLM] Request Body (messages truncated):`);
   console.log(`[LLM]    - model: ${requestBody.model}`);
   console.log(`[LLM]    - temperature: ${requestBody.temperature}`);
   console.log(`[LLM]    - max_tokens: ${requestBody.max_tokens}`);
-  
+
   try {
     const startTime = Date.now();
-    
-    console.log(`[LLM] ⏳ Sending request to OpenAI API...`);
-    
+
+    console.log(`[LLM] Sending request to OpenAI API...`);
+
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -104,13 +128,13 @@ export async function scoreTask(
     });
 
     const elapsed = Date.now() - startTime;
-    
-    console.log(`[LLM] ⏱️  Response received in ${elapsed}ms`);
-    console.log(`[LLM] 📊 HTTP Status: ${response.status} ${response.statusText}`);
+
+    console.log(`[LLM] Response received in ${elapsed}ms`);
+    console.log(`[LLM] HTTP Status: ${response.status} ${response.statusText}`);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.log(`[LLM] ❌ API Error Response:`);
+      console.log(`[LLM] API Error Response:`);
       console.log(`[LLM]    ${errorText}`);
       throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
@@ -130,74 +154,52 @@ export async function scoreTask(
         total_tokens: number;
       };
     };
-    
-    console.log(`[LLM] ✅ API Response Success!`);
-    console.log(`[LLM] 📦 Response ID: ${data.id || 'N/A'}`);
-    console.log(`[LLM] 🤖 Response Model: ${data.model || 'N/A'}`);
-    
-    if (data.usage) {
-      console.log(`[LLM] 📈 Token Usage:`);
-      console.log(`[LLM]    - Prompt: ${data.usage.prompt_tokens}`);
-      console.log(`[LLM]    - Completion: ${data.usage.completion_tokens}`);
-      console.log(`[LLM]    - Total: ${data.usage.total_tokens}`);
-    }
-    
+
+    console.log(`[LLM] API Response Success!`);
+    console.log(`[LLM] Response ID: ${data.id || 'N/A'}`);
+    console.log(`[LLM] Response Model: ${data.model || 'N/A'}`);
+
     const content = data.choices[0]?.message?.content;
     const finishReason = data.choices[0]?.finish_reason;
-    
-    console.log(`[LLM] 🏁 Finish Reason: ${finishReason || 'N/A'}`);
-    console.log(`[LLM] 📄 Raw Content: ${content}`);
-    
+
+    console.log(`[LLM] Finish Reason: ${finishReason || 'N/A'}`);
+    console.log(`[LLM] Raw Content: ${content}`);
+
     if (!content) {
-      console.log(`[LLM] ❌ Empty response content!`);
       throw new Error('Empty response from OpenAI');
     }
 
     const parsed = JSON.parse(content) as { X?: number; Y?: number };
-    
-    console.log(`[LLM] 🔍 Parsed JSON: ${JSON.stringify(parsed)}`);
-    
-    // Validate response
+
+    // Validate response (extra safety)
     if (!validateScore(parsed)) {
-      console.log(`[LLM] ❌ Invalid score format!`);
-      console.log(`[LLM]    X type: ${typeof parsed.X}, value: ${parsed.X}`);
-      console.log(`[LLM]    Y type: ${typeof parsed.Y}, value: ${parsed.Y}`);
       throw new Error('Invalid score format');
     }
 
     console.log('='.repeat(60));
-    console.log(`[LLM] ✅ FINAL SCORE: X=${parsed.X}, Y=${parsed.Y}`);
+    console.log(`[LLM] FINAL SCORE: X=${parsed.X}, Y=${parsed.Y}`);
     console.log('='.repeat(60));
     console.log('');
-    
-    return {
-      X: parsed.X!,
-      Y: parsed.Y!
-    };
+
+    return { X: parsed.X!, Y: parsed.Y! };
   } catch (error) {
-    console.log(`[LLM] ❌ Error occurred: ${(error as Error).message}`);
-    
+    console.log(`[LLM] Error occurred: ${(error as Error).message}`);
+
     // Retry once on failure
     if (retryCount < 1) {
-      console.log(`[LLM] 🔄 Retrying (attempt ${retryCount + 2})...`);
+      console.log(`[LLM] Retrying (attempt ${retryCount + 2})...`);
       return scoreTask(config, taskName, taskDescription, rubric, retryCount + 1);
     }
-    
-    console.log(`[LLM] ❌ Max retries exceeded. Giving up.`);
+
+    console.log(`[LLM] Max retries exceeded. Giving up.`);
     throw error;
   }
 }
 
 function validateScore(score: { X?: number; Y?: number }): boolean {
-  if (typeof score.X !== 'number' || typeof score.Y !== 'number') {
-    return false;
-  }
-  if (!Number.isInteger(score.X) || !Number.isInteger(score.Y)) {
-    return false;
-  }
-  if (score.X < 1 || score.X > 5 || score.Y < 1 || score.Y > 5) {
-    return false;
-  }
+  if (typeof score.X !== 'number' || typeof score.Y !== 'number') return false;
+  if (!Number.isInteger(score.X) || !Number.isInteger(score.Y)) return false;
+  if (score.X < 1 || score.X > 5 || score.Y < 1 || score.Y > 5) return false;
   return true;
 }
 
@@ -207,7 +209,7 @@ export async function scoreTasks(
   rubric: Rubric
 ): Promise<Map<string, ScoreResponse>> {
   const results = new Map<string, ScoreResponse>();
-  
+
   // Process tasks sequentially to avoid rate limiting
   for (const task of tasks) {
     try {
@@ -219,6 +221,6 @@ export async function scoreTasks(
       results.set(task.task_id, { X: -1, Y: -1 });
     }
   }
-  
+
   return results;
 }

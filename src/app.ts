@@ -10,6 +10,7 @@ type Env = {
   Bindings: {
     OPENAI_API_KEY?: string;
     OPENAI_BASE_URL?: string;
+    OPENAI_MODEL?: string;
   };
 };
 
@@ -25,27 +26,30 @@ const sessions = new Map<string, {
   created_at: string;
 }>();
 
-// Helper function to get LLM config
+/**
+ * Helper function to get LLM config
+ * - Default model is GPT-5 unless OPENAI_MODEL is explicitly set
+ */
 function getLLMConfig(): LLMConfig | null {
   const apiKey = process.env.OPENAI_API_KEY;
-  
+
+  const baseUrl = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
+  const model = process.env.OPENAI_MODEL || 'gpt-5';
+
   console.log('');
   console.log('[Config] ========== LLM Configuration ==========');
   console.log(`[Config] OPENAI_API_KEY: ${apiKey ? apiKey.substring(0, 15) + '...' : 'NOT SET ❌'}`);
-  console.log(`[Config] OPENAI_BASE_URL: ${process.env.OPENAI_BASE_URL || 'NOT SET (will use default)'}`);
-  console.log(`[Config] OPENAI_MODEL: ${process.env.OPENAI_MODEL || 'NOT SET (will use gpt-4o)'}`);
+  console.log(`[Config] OPENAI_BASE_URL: ${process.env.OPENAI_BASE_URL || 'NOT SET (will use default)'} -> ${baseUrl}`);
+  console.log(`[Config] OPENAI_MODEL: ${process.env.OPENAI_MODEL || 'NOT SET (will use gpt-5)'} -> ${model}`);
   console.log('[Config] ==========================================');
-  
+
   if (!apiKey) {
     console.error('[Config] ❌ OPENAI_API_KEY not found in environment!');
     return null;
   }
-  
-  const baseUrl = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
-  const model = process.env.OPENAI_MODEL || 'gpt-4o';
-  
+
   console.log(`[Config] ✅ LLM Config Ready - Base URL: ${baseUrl}, Model: ${model}`);
-  
+
   return {
     apiKey,
     baseUrl,
@@ -66,9 +70,9 @@ app.post('/api/parse-excel', async (c) => {
     return c.json(result);
   } catch (error) {
     console.error('Parse Excel error:', error);
-    return c.json({ 
-      success: false, 
-      error: 'Failed to parse Excel file' 
+    return c.json({
+      success: false,
+      error: 'Failed to parse Excel file'
     }, 500);
   }
 });
@@ -88,7 +92,7 @@ app.get('/api/template', (c) => {
 app.post('/api/score', async (c) => {
   try {
     const { taskId, taskName, taskDescription, rubric } = await c.req.json();
-    
+
     console.log('');
     console.log('[API] ########## NEW SCORING REQUEST ##########');
     console.log(`[API] Task ID: ${taskId}`);
@@ -97,7 +101,7 @@ app.post('/api/score', async (c) => {
     console.log(`[API] Rubric X keys: ${Object.keys(rubric.X).join(', ')}`);
     console.log(`[API] Rubric Y keys: ${Object.keys(rubric.Y).join(', ')}`);
     console.log('[API] ###########################################');
-    
+
     // Get LLM config from environment
     const config = getLLMConfig();
     if (!config) {
@@ -106,12 +110,11 @@ app.post('/api/score', async (c) => {
     }
 
     console.log('[API] ✅ LLM Config obtained, calling scoreTask...');
-    
     const score = await scoreTask(config, taskName, taskDescription, rubric);
-    
+
     console.log('[API] ✅ scoreTask completed successfully');
     console.log(`[API] 🎯 Final Score: X=${score.X}, Y=${score.Y}`);
-    
+
     return c.json(score);
   } catch (error) {
     console.error('[API] ❌ Score error:', error);
@@ -123,15 +126,15 @@ app.post('/api/score', async (c) => {
 app.get('/api/health', (c) => {
   const hasApiKey = !!process.env.OPENAI_API_KEY;
   const baseUrl = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
-  const model = process.env.OPENAI_MODEL || 'gpt-4o';
-  
+  const model = process.env.OPENAI_MODEL || 'gpt-5';
+
   console.log('[Health] Health check requested');
   console.log(`[Health] API Key: ${hasApiKey ? 'SET ✅' : 'NOT SET ❌'}`);
   console.log(`[Health] Base URL: ${baseUrl}`);
   console.log(`[Health] Model: ${model}`);
-  
-  return c.json({ 
-    status: 'ok', 
+
+  return c.json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
     hasApiKey,
     baseUrl: hasApiKey ? baseUrl : undefined,
@@ -142,17 +145,17 @@ app.get('/api/health', (c) => {
 // API: Test LLM connection
 app.get('/api/test-llm', async (c) => {
   console.log('[Test] Testing LLM connection...');
-  
+
   const config = getLLMConfig();
   if (!config) {
     return c.json({ success: false, error: 'API key not configured' });
   }
-  
+
   try {
     const testRubric: Rubric = {
       X: {
         "1": "Very difficult",
-        "2": "Difficult", 
+        "2": "Difficult",
         "3": "Moderate",
         "4": "Easy",
         "5": "Very easy"
@@ -160,23 +163,29 @@ app.get('/api/test-llm', async (c) => {
       Y: {
         "1": "Minimal impact",
         "2": "Low impact",
-        "3": "Moderate impact", 
+        "3": "Moderate impact",
         "4": "High impact",
         "5": "Transformative"
       }
     };
-    
-    const score = await scoreTask(config, "Test Task - Build a simple website", "A basic HTML/CSS website", testRubric);
-    
-    return c.json({ 
-      success: true, 
+
+    const score = await scoreTask(
+      config,
+      "Test Task - Build a simple website",
+      "A basic HTML/CSS website",
+      testRubric
+    );
+
+    return c.json({
+      success: true,
       message: 'LLM connection successful!',
-      testScore: score 
+      testScore: score,
+      modelUsed: config.model
     });
   } catch (error) {
-    return c.json({ 
-      success: false, 
-      error: (error as Error).message 
+    return c.json({
+      success: false,
+      error: (error as Error).message
     });
   }
 });
